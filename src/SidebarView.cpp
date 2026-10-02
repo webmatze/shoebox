@@ -28,7 +28,7 @@ SidebarView::SidebarView()
 	fList->AddUnder(new QueryItem("Flagged",
 		"(BEOS:TYPE==\"image/*\")&&(Photo:Flag==1)"), smart);
 	fList->AddUnder(new QueryItem("This Week",
-		"(BEOS:TYPE==\"image/*\")&&(Media:CaptureTime>=THIS_WEEK)"), smart);
+		"(BEOS:TYPE==\"image/*\")&&(last_modified>=THIS_WEEK)"), smart);
 
 	fAlbumsHeader = new BStringItem("Albums");
 	fList->AddItem(fAlbumsHeader);

@@ -99,8 +99,9 @@ Each module does one thing:
 - **Tag queries are substring matches** (`Photo:Tags=="*hiking*"`) and can
   false-positive: a tag "mount" also matches "mountains". Fix: switch to
   one-attribute-per-tag or sentinel-delimited values.
-- **No EXIF ingest yet**, so `Media:CaptureTime` is always empty and
-  "This Week" won't find anything until ingest lands.
+- **No EXIF ingest yet** — `Media:CaptureTime` and camera fields stay empty.
+  "This Week" currently matches on `last_modified` as a stand-in; a proper
+  capture-time filter needs ingest.
 - **No predicate escaping** of album/tag names.
 - **No undo**, no multi-select, no delete.
 
