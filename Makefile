@@ -17,7 +17,9 @@ SRCS = \
 	src/ThumbnailCache.cpp \
 	src/Importer.cpp \
 	src/TagModel.cpp \
-	src/ExifReader.cpp
+	src/ExifReader.cpp \
+	src/SmartFolders.cpp \
+	src/SmartFolderDialog.cpp
 
 RDEFS =
 RSRCS =

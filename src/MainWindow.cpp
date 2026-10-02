@@ -7,6 +7,8 @@
 #include "PhotoGridView.h"
 #include "QueryModel.h"
 #include "SidebarView.h"
+#include "SmartFolderDialog.h"
+#include "SmartFolders.h"
 #include "TagModel.h"
 
 #include <Alert.h>
@@ -55,6 +57,8 @@ MainWindow::MainWindow()
 	fMenuBar = new BMenuBar("menubar");
 
 	BMenu* fileMenu = new BMenu("File");
+	fileMenu->AddItem(new BMenuItem("New smart folder" B_UTF8_ELLIPSIS,
+		new BMessage(SBX_NEW_SMART_FOLDER), 'N'));
 	fileMenu->AddItem(new BMenuItem("Import folder" B_UTF8_ELLIPSIS,
 		new BMessage(SBX_SHOW_IMPORT_PANEL), 'I'));
 	fileMenu->AddSeparatorItem();
@@ -105,6 +109,7 @@ MainWindow::MainWindow()
 	fQueryModel->SetListener(BMessenger(fGrid, this));
 
 	fSidebar->SetTarget(BMessenger(this));
+	fSidebar->SetContextTarget(BMessenger(this));
 
 	BMessenger me(this);
 	fImportPanel = new BFilePanel(B_OPEN_PANEL, &me, nullptr,
@@ -112,6 +117,7 @@ MainWindow::MainWindow()
 	fImportPanel->Window()->SetTitle("Shoebox: import folder");
 
 	_RefreshCatalog();
+	_RefreshSmartFolders();
 }
 
 
@@ -169,6 +175,18 @@ MainWindow::MessageReceived(BMessage* message)
 			return;
 		case SBX_REFRESH_CATALOG:
 			_RefreshCatalog();
+			return;
+		case SBX_NEW_SMART_FOLDER:
+			_OnNewSmartFolder();
+			return;
+		case SBX_EDIT_SMART_FOLDER:
+			_OnEditSmartFolder(message);
+			return;
+		case SBX_DELETE_SMART_FOLDER:
+			_OnDeleteSmartFolder(message);
+			return;
+		case SBX_SAVE_SMART_FOLDER:
+			_OnSaveSmartFolder(message);
 			return;
 		default:
 			BWindow::MessageReceived(message);
@@ -290,6 +308,95 @@ MainWindow::_RefreshCatalog()
 	TagModel::Catalog cat;
 	TagModel::Collect(cat);
 	fSidebar->SetCatalog(cat.albums, cat.tags);
+}
+
+
+void
+MainWindow::_RefreshSmartFolders()
+{
+	BObjectList<SmartFolders::Entry, true> entries(16);
+	SmartFolders::Load(entries);
+	fSidebar->SetUserSmartFolders(entries);
+}
+
+
+void
+MainWindow::_OnNewSmartFolder()
+{
+	SmartFolderDialog* dlg = new SmartFolderDialog(BMessenger(this),
+		nullptr, "", "");
+	dlg->Show();
+}
+
+
+void
+MainWindow::_OnEditSmartFolder(const BMessage* message)
+{
+	entry_ref ref;
+	if (message->FindRef("ref", &ref) != B_OK)
+		return;
+
+	// Reload current values from disk.
+	BObjectList<SmartFolders::Entry, true> entries(16);
+	SmartFolders::Load(entries);
+	for (int32 i = 0; i < entries.CountItems(); i++) {
+		const SmartFolders::Entry* e = entries.ItemAt(i);
+		if (e->file == ref) {
+			SmartFolderDialog* dlg = new SmartFolderDialog(
+				BMessenger(this), &ref,
+				e->name.String(), e->predicate.String());
+			dlg->Show();
+			return;
+		}
+	}
+}
+
+
+void
+MainWindow::_OnDeleteSmartFolder(const BMessage* message)
+{
+	entry_ref ref;
+	if (message->FindRef("ref", &ref) != B_OK)
+		return;
+
+	BAlert* alert = new BAlert("Delete smart folder",
+		"Delete this smart folder?", "Cancel", "Delete",
+		nullptr, B_WIDTH_AS_USUAL, B_WARNING_ALERT);
+	alert->SetShortcut(0, B_ESCAPE);
+	int32 choice = alert->Go();
+	if (choice != 1)
+		return;
+
+	SmartFolders::Delete(ref);
+	_RefreshSmartFolders();
+}
+
+
+void
+MainWindow::_OnSaveSmartFolder(const BMessage* message)
+{
+	const char* name = nullptr;
+	const char* predicate = nullptr;
+	message->FindString("name", &name);
+	message->FindString("predicate", &predicate);
+	if (name == nullptr || predicate == nullptr)
+		return;
+
+	entry_ref existing;
+	bool isEdit = (message->FindRef("existing", &existing) == B_OK);
+
+	status_t s = isEdit
+		? SmartFolders::Update(existing, name, predicate)
+		: SmartFolders::Create(name, predicate);
+	if (s != B_OK) {
+		char text[256];
+		snprintf(text, sizeof(text),
+			"Could not save smart folder: %s", strerror(s));
+		BAlert* alert = new BAlert("Save failed", text, "OK");
+		alert->Go(nullptr);
+		return;
+	}
+	_RefreshSmartFolders();
 }
 
 

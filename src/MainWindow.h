@@ -28,7 +28,12 @@ private:
 			void			_OnFlag(int32 value);
 			void			_OnOpenImage();
 			void			_OnRevealImage();
+			void			_OnNewSmartFolder();
+			void			_OnEditSmartFolder(const BMessage* message);
+			void			_OnDeleteSmartFolder(const BMessage* message);
+			void			_OnSaveSmartFolder(const BMessage* message);
 			void			_RefreshCatalog();
+			void			_RefreshSmartFolders();
 			BString			_ExpandPredicate(const char* raw) const;
 
 			BMenuBar*		fMenuBar;

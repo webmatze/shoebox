@@ -16,6 +16,11 @@ enum {
 	SBX_OPEN_IMAGE        = 'sbOI', // menu    -> window: open current in app
 	SBX_REVEAL_IMAGE      = 'sbRI', // menu    -> window: reveal in Tracker
 	SBX_REFRESH_CATALOG   = 'sbRK', // panel/import -> window: rescan tags/albums
+	SBX_NEW_SMART_FOLDER  = 'sbNS', // menu    -> window: show new SF dialog
+	SBX_EDIT_SMART_FOLDER = 'sbES', // sidebar -> window: show edit SF dialog
+	SBX_DELETE_SMART_FOLDER = 'sbDS', // sidebar -> window: delete SF
+	SBX_SAVE_SMART_FOLDER = 'sbSS', // dialog  -> window: persist SF (name,
+	                                //          predicate, optional ref)
 };
 
 #endif
