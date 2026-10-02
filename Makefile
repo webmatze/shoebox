@@ -16,7 +16,8 @@ SRCS = \
 	src/IndexSetup.cpp \
 	src/ThumbnailCache.cpp \
 	src/Importer.cpp \
-	src/TagModel.cpp
+	src/TagModel.cpp \
+	src/ExifReader.cpp
 
 RDEFS =
 RSRCS =

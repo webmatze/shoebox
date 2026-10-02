@@ -1,5 +1,8 @@
 #include "Importer.h"
 
+#include "AttributeNames.h"
+#include "ExifReader.h"
+
 #include <Directory.h>
 #include <Entry.h>
 #include <Mime.h>
@@ -9,6 +12,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 namespace {
 
@@ -39,6 +43,13 @@ process_file(const char* path, Importer::Result& r)
 	node.WriteAttr("BEOS:TYPE", B_MIME_STRING_TYPE, 0,
 		type, strlen(type) + 1);
 	r.reindexed++;
+
+	time_t capture = ExifReader::ReadCaptureTime(path);
+	if (capture > 0) {
+		int32 seconds = (int32)capture;
+		node.WriteAttr(SBX_ATTR_CAPTURE_TIME, B_INT32_TYPE, 0,
+			&seconds, sizeof(seconds));
+	}
 }
 
 
