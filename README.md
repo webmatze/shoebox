@@ -13,13 +13,20 @@ move with it; delete it and they're gone. The filesystem *is* the database.
 - Three-pane layout: smart folders / thumbnail grid / metadata inspector.
 - **Live smart folders** — "All Photos", "Rated 4+", "Flagged", "This Week" —
   driven by `BQuery` with `B_LIVE_QUERY` so changes appear without a refresh.
+- **User-defined smart folders**: File → *New smart folder…* for free-form
+  predicates. Edit and Delete via right-click. Stored as native Haiku query
+  files in `~/config/settings/Shoebox/smartfolders/` — Tracker can open them
+  too.
 - **Dynamic Albums and Tags** — the sidebar discovers album and tag values by
   scanning `Photo:Album` and `Photo:Tags` across every query-capable volume;
   new ones appear as soon as you type them into the inspector.
+- **EXIF ingest** on import: `Media:CaptureTime` is populated from the JPEG
+  APP1 segment (DateTimeOriginal, falling back to DateTime).
 - **Thumbnail cache** stored as a `Shoebox:Thumb256` BFS attribute, so
   thumbnails travel with the file.
-- **Import / Rescan** command that walks a folder and re-indexes images
-  (fixes pre-existing files that were saved before the BFS indices existed).
+- **Import / Rescan** command that walks a folder, re-indexes images, and
+  pulls EXIF (fixes pre-existing files that were saved before the BFS
+  indices existed).
 - **Image menu** with rate (0–5), flag (pick/none/reject), open, and reveal
   in Tracker.
 - Double-click a thumbnail to open the image in the default handler.
@@ -34,8 +41,8 @@ move with it; delete it and they're gone. The filesystem *is* the database.
 | `Photo:Album` | `B_STRING_TYPE` | album name |
 | `Photo:Caption` | `B_STRING_TYPE` | free text |
 | `Shoebox:Thumb256` | `B_RAW_TYPE` | cached PNG thumbnail |
-| `Media:CaptureTime` | `B_INT32_TYPE` | epoch seconds, from EXIF (TODO) |
-| `Media:Camera`, `Media:Lens`, … | various | reserved for EXIF ingest |
+| `Media:CaptureTime` | `B_INT32_TYPE` | epoch seconds, from EXIF |
+| `Media:Camera`, `Media:Lens`, … | various | reserved for future ingest |
 
 BFS indices for the `Photo:*` and `Media:CaptureTime` attributes are created
 on first launch via `fs_create_index`.
@@ -69,6 +76,9 @@ on all writable, query-capable volumes.
 5. Click **Rated 4+** — the photo is already there, no refresh.
 6. Type "Vacation" into the Album field → a Vacation entry appears under
    **Albums** in the sidebar. Click it to filter.
+7. **File → New smart folder…** → name it `3 stars`, predicate
+   `(BEOS:TYPE=="image/*")&&(Photo:Rating==3)`. Appears under Smart Folders;
+   right-click to edit or delete.
 
 ## Architecture
 
@@ -88,7 +98,13 @@ Each module does one thing:
   `BView`, re-encodes as PNG, caches in `Shoebox:Thumb256`.
 - `IndexSetup` — ensures `BEOS:TYPE` and `Photo:*`/`Media:CaptureTime`
   indices exist with the right types.
-- `Importer` — walks a folder, rewrites `BEOS:TYPE` to force index insert.
+- `Importer` — walks a folder, rewrites `BEOS:TYPE` to force index insert,
+  and calls `ExifReader` to populate `Media:CaptureTime`.
+- `ExifReader` — minimal JPEG APP1 / TIFF parser; returns epoch seconds for
+  `DateTimeOriginal` (or `DateTime` as fallback).
+- `SmartFolders` — persistence for user-defined queries as native query
+  files in the settings directory.
+- `SmartFolderDialog` — modal `BWindow` for create/edit (Name + Predicate).
 - `AttributeNames.h`, `Messages.h` — the two header files everything else
   pivots around.
 
@@ -99,11 +115,13 @@ Each module does one thing:
 - **Tag queries are substring matches** (`Photo:Tags=="*hiking*"`) and can
   false-positive: a tag "mount" also matches "mountains". Fix: switch to
   one-attribute-per-tag or sentinel-delimited values.
-- **No EXIF ingest yet** — `Media:CaptureTime` and camera fields stay empty.
-  "This Week" currently matches on `last_modified` as a stand-in; a proper
-  capture-time filter needs ingest.
-- **No predicate escaping** of album/tag names.
-- **No undo**, no multi-select, no delete.
+- **EXIF ingest is JPEG-only**; PNG/HEIF/TIFF would need a different parser.
+  No timezone handling — datetimes are interpreted as the host's local time.
+- **"This Week"** currently matches on `last_modified`; a capture-time
+  variant would use `Media:CaptureTime` but miss any file without EXIF.
+- **No predicate escaping** anywhere — album/tag names and user-defined
+  smart folder predicates are passed through verbatim.
+- **No undo**, no multi-select, no delete-image command.
 
 ## Status
 
